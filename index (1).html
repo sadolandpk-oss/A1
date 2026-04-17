@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Giá Pro - A1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* Định dạng ẩn khi in */
+        @media print {
+            .no-print { display: none !important; }
+            .date-input { border: none !important; appearance: none; -webkit-appearance: none; }
+        }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .date-input { border-bottom: 1px dashed #3b82f6; outline: none; background: transparent; color: #1e40af; font-weight: bold; }
+        .item-row input { width: 100%; outline: none; background: transparent; }
+    </style>
+</head>
+<body class="bg-slate-100 p-2 md:p-8">
+
+    <div id="content" class="max-w-4xl mx-auto bg-white p-6 md:p-10 shadow-lg rounded-lg border border-gray-200">
+        <div class="flex justify-between border-b-2 border-blue-700 pb-4 mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-blue-800 uppercase">Báo Giá Thi Công</h1>
+                <div class="mt-2 text-sm">
+                    <span class="text-gray-500">Ngày lập:</span>
+                    <input type="date" id="reportDate" class="date-input ml-2">
+                </div>
+            </div>
+            <div class="text-right">
+                <input type="text" class="font-bold text-right block w-full outline-none text-blue-900" value="TÊN CÔNG TY CỦA BẠN">
+                <input type="text" class="text-xs text-gray-500 text-right block w-full outline-none mt-1" value="Hotline: 090x.xxx.xxx">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse border border-gray-200">
+                <thead>
+                    <tr class="bg-blue-700 text-white text-sm">
+                        <th class="p-3 border text-center w-12">STT</th>
+                        <th class="p-3 border">Hạng mục thi công</th>
+                        <th class="p-3 border text-center w-16">ĐVT</th>
+                        <th class="p-3 border text-center w-20">SL</th>
+                        <th class="p-3 border text-center w-28">Đơn giá</th>
+                        <th class="p-3 border text-right w-32">Thành tiền</th>
+                        <th class="p-3 border text-center w-10 no-print">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-items">
+                    <tr class="item-row border-b">
+                        <td class="p-3 border text-center stt font-bold text-gray-400">1</td>
+                        <td class="p-3 border"><input type="text" placeholder="Nhập hạng mục..."></td>
+                        <td class="p-3 border"><input type="text" class="text-center" placeholder="m2"></td>
+                        <td class="p-3 border"><input type="number" class="text-center qty font-semibold" value="0" oninput="updateTotal()"></td>
+                        <td class="p-3 border"><input type="number" class="text-center price font-semibold" value="0" oninput="updateTotal()"></td>
+                        <td class="p-3 border text-right font-bold text-blue-700 row-total">0</td>
+                        <td class="p-3 border text-center no-print">
+                            <button onclick="removeRow(this)" class="text-red-500 font-bold px-2">✕</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <button id="btnAddRow" onclick="addRow()" class="mt-4 bg-emerald-500 text-white px-4 py-2 rounded shadow no-print text-sm font-bold uppercase tracking-wider hover:bg-emerald-600">
+            + Thêm hạng mục
+        </button>
+
+        <div class="mt-10 flex flex-col items-end border-t border-gray-100 pt-4">
+            <div class="flex justify-between w-64 items-center">
+                <span class="text-gray-600 font-bold uppercase text-xs">Tổng cộng:</span>
+                <span id="grand-total" class="text-xl font-black text-red-600 tracking-tight">0 VNĐ</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed bottom-6 right-6 flex flex-col gap-3 no-print">
+        <button onclick="exportPDF()" class="bg-red-600 text-white px-6 py-4 rounded-full shadow-2xl font-bold uppercase tracking-widest hover:scale-105 transition-all text-sm">
+            Tải PDF
+        </button>
+        <button onclick="sharePDF()" class="bg-blue-600 text-white px-6 py-4 rounded-full shadow-2xl font-bold uppercase tracking-widest hover:scale-105 transition-all text-sm">
+            Chia sẻ
+        </button>
+    </div>
+
+    <script>
+        window.onload = () => { document.getElementById('reportDate').value = new Date().toISOString().split('T')[0]; };
+
+        function addRow() {
+            const tbody = document.getElementById('invoice-items');
+            const row = document.createElement('tr');
+            row.className = "item-row border-b";
+            row.innerHTML = `
+                <td class="p-3 border text-center stt font-bold text-gray-400"></td>
+                <td class="p-3 border"><input type="text" placeholder="Nhập hạng mục..."></td>
+                <td class="p-3 border"><input type="text" class="text-center" placeholder="m2"></td>
+                <td class="p-3 border"><input type="number" class="text-center qty font-semibold" value="0" oninput="updateTotal()"></td>
+                <td class="p-3 border"><input type="number" class="text-center price font-semibold" value="0" oninput="updateTotal()"></td>
+                <td class="p-3 border text-right font-bold text-blue-700 row-total">0</td>
+                <td class="p-3 border text-center no-print"><button onclick="removeRow(this)" class="text-red-500 font-bold px-2">✕</button></td>
+            `;
+            tbody.appendChild(row);
+            updateSTT();
+        }
+
+        function removeRow(btn) { btn.closest('tr').remove(); updateSTT(); updateTotal(); }
+        function updateSTT() { document.querySelectorAll('.stt').forEach((td, index) => td.innerText = index + 1); }
+        function updateTotal() {
+            let grandTotal = 0;
+            document.querySelectorAll('.item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.qty').value) || 0;
+                const price = parseFloat(row.querySelector('.price').value) || 0;
+                const total = qty * price;
+                row.querySelector('.row-total').innerText = total.toLocaleString('vi-VN');
+                grandTotal += total;
+            });
+            document.getElementById('grand-total').innerText = grandTotal.toLocaleString('vi-VN') + " VNĐ";
+        }
+
+        // Cấu hình PDF chuẩn
+        const opt = {
+            margin: [0.3, 0.3, 0.3, 0.3],
+            filename: 'Bao-Gia-Thi-Cong.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Hàm xuất PDF (Sửa lỗi hiển thị nút Xóa)
+        function exportPDF() {
+            const element = document.getElementById('content');
+            // Trước khi xuất, ẩn các nút Xóa đi
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.visibility = 'hidden');
+
+            html2pdf().set(opt).from(element).toPdf().get('pdf').save().then(() => {
+                // Sau khi xong, hiện lại để dùng tiếp
+                noPrintElements.forEach(el => el.style.visibility = 'visible');
+            });
+        }
+
+        // Hàm chia sẻ (Nâng cấp tương thích Zalo/Messenger)
+        async function sharePDF() {
+            const element = document.getElementById('content');
+            const noPrintElements = document.querySelectorAll('.no-print');
+            noPrintElements.forEach(el => el.style.visibility = 'hidden');
+
+            try {
+                const pdfBlob = await html2pdf().set(opt).from(element).outputBlob();
+                const file = new File([pdfBlob], "Bao-Gia.pdf", { type: "application/pdf" });
+
+                if (navigator.share) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Báo giá thi công',
+                        text: 'Gửi quý khách bảng báo giá chi tiết.'
+                    });
+                } else {
+                    alert("Trình duyệt không hỗ trợ chia sẻ trực tiếp. Vui lòng nhấn TẢI PDF rồi gửi file qua Zalo.");
+                }
+            } catch (err) {
+                console.error("Lỗi chia sẻ:", err);
+            } finally {
+                noPrintElements.forEach(el => el.style.visibility = 'visible');
+            }
+        }
+    </script>
+</body>
+</html>
